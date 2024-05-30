@@ -47,12 +47,15 @@ def elem_list(df):
     return str_elem
 
 ## Element concentration variation
-def plot_ppm_variation(df, element):
+def plot_ppm_variation(df, element, area):
     lat_list = np.sort(df['latitude'].unique())[::-1]
     
     for lat in lat_list:
         subset = df[df['latitude'] == lat].sort_values(by='longitude')
-        plt.figure(figsize=(10, 2))
+        if area == 'Ramagiri':
+            plt.figure(figsize=(10, 2))
+        elif area == 'Kodangal':
+            plt.figure(figsize=(12, 2))
         plt.plot(subset['longitude'], subset[element], marker='o', linestyle='-', color='b')
         plt.title(f'Concentration at Latitude {lat}')
         plt.xlabel('Longitude')
@@ -62,7 +65,7 @@ def plot_ppm_variation(df, element):
         plt.show()
 
 ## Contour maps
-def plot_contour(df, element, name, title):
+def plot_contour(df, element, name, title, area):
     # Check if the element exists in the dataframe
     if element not in df.columns:
         raise KeyError(f"The element '{element}' does not exist in the dataframe.")
@@ -87,7 +90,10 @@ def plot_contour(df, element, name, title):
 
     cmap = LinearSegmentedColormap.from_list("green_to_red", ["green", "yellow", "red"])
     
-    plt.figure(figsize=(10, 6))
+    if area == 'Ramagiri':
+        plt.figure(figsize=(10, 6))
+    elif area == 'Kodangal':
+ 	    plt.figure(figsize=(15, 5))
 
     # Filled contour
     cp = plt.contourf(grid_x, grid_y, grid_z, levels=15, cmap=cmap, alpha=0.7)
