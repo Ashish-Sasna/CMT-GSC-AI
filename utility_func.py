@@ -17,9 +17,12 @@ from sklearn.cluster import KMeans
 from sklearn.compose import ColumnTransformer
 from sklearn.decomposition import PCA
 from sklearn.neighbors import NearestNeighbors
-from sklearn.preprocessing import StandardScaler, RobustScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder, RobustScaler
 from sklearn.model_selection import KFold, train_test_split, GridSearchCV, learning_curve
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, median_absolute_error
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import RFECV, SelectKBest, f_regression
 
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
@@ -28,6 +31,8 @@ from tensorflow.keras.callbacks import LearningRateScheduler, ReduceLROnPlateau,
 from tensorflow.keras.optimizers import Adam, SGD
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.optimizers.schedules import ExponentialDecay
+
+import xgboost
 
 import pickle as pkl
 
@@ -261,6 +266,56 @@ def pred_val(df, columns, sc, model):
 
     return y_pred
 
+## Evaluate the final model
+def eval_model(y, y_pred, title):
+    
+    # mse = mean_squared_error(y, y_pred)
+    medae = median_absolute_error(y, y_pred)
+    # rmse = np.sqrt(mse)
+    mae = mean_absolute_error(y, y_pred)
+    r_squared = r2_score(y, y_pred)
+
+    print(f'{title}')
+    print(f'Median Absolute Error: {np.round(medae, 2)}')
+    # print(f'Root Mean Squared Error: {np.round(rmse, 2)}')
+    print(f'Mean Absolute Error: {np.round(mae, 2)}')
+    print(f'R-squared Error: {np.round(r_squared, 2)}')
+
+## Plotting Learning curves
+def plot_learing_curve(model, X, y, cv, model_title, area):
+
+    if area == 'Kodangal':
+        train_sizes = [50, 100, 200, 300, 380]
+    elif area == 'Ramagiri':
+        train_sizes = [30, 50, 70, 100, 128]
+
+    train_sizes, train_scores, validation_scores = learning_curve(model, X, y, 
+                                                                  train_sizes=train_sizes, 
+                                                                  cv=cv, 
+                                                                  scoring='neg_mean_absolute_error', 
+                                                                  shuffle=True)
+
+    train_scores_mean = -train_scores.mean(axis=1)
+    validation_scores_mean = -validation_scores.mean(axis=1)
+
+    #plt.style.use('seaborn')
+    plt.figure(figsize=(7, 5))
+    plt.plot(train_sizes, 
+             train_scores_mean, 
+             label = 'Training error')
+    plt.plot(train_sizes, 
+             validation_scores_mean, 
+             label = 'Validation error')
+    plt.ylabel('Mean MAE', 
+               fontsize = 14)
+    plt.xlabel('Training set size', 
+               fontsize = 14)
+    plt.title(f'{area}: Learning curves for a {model_title} model', 
+              fontsize = 18, 
+              y = 1.03)
+    plt.legend()
+    plt.ylim(0,40)
+
 ## Train vs Val loss
 def metrics_graph(model, num_epoch):
     
@@ -278,12 +333,12 @@ def metrics_graph(model, num_epoch):
     plt.xlabel('No. of epochs')
     plt.ylabel('Loss')
 
-## Multiple loss functions
-def r2_score(y_true, y_pred):
-    ss_res = tf.reduce_sum(tf.square(y_true - y_pred))
-    ss_tot = tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true)))
-    return 1 - (ss_res / (ss_tot + tf.keras.backend.epsilon()))
+# ## Multiple loss functions
+# def r2_score(y_true, y_pred):
+#     ss_res = tf.reduce_sum(tf.square(y_true - y_pred))
+#     ss_tot = tf.reduce_sum(tf.square(y_true - tf.reduce_mean(y_true)))
+#     return 1 - (ss_res / (ss_tot + tf.keras.backend.epsilon()))
 
-def median_absolute_error(y_true, y_pred):
-    error = tf.abs(y_true - y_pred)
-    return tf.numpy_function(np.median, [error], tf.float32)
+# def median_absolute_error(y_true, y_pred):
+#     error = tf.abs(y_true - y_pred)
+#     return tf.numpy_function(np.median, [error], tf.float32)
