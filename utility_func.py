@@ -251,14 +251,14 @@ def feature_importance(rfecv, X, title):
                  fontsize=18)
 
 ## Predicting validation data
-def pred_val(df, columns, sc, model):
+def pred_val(df, sc, model):
 
     scaled_df = sc.transform(df)
     
     scaled_df = pd.DataFrame(scaled_df, 
                              columns=df.columns)
     
-    scaled_df = scaled_df[columns]
+    # scaled_df = scaled_df[columns]
 
     # pca_df = pca.transform(scaled_df)
 
