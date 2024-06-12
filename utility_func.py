@@ -267,19 +267,21 @@ def pred_val(df, sc, model):
     return y_pred
 
 ## Evaluate the final model
-def eval_model(y, y_pred, title):
+def eval_model(y, y_pred, title, n_sampl, n_obsv):
     
-    # mse = mean_squared_error(y, y_pred)
+    mse = mean_squared_error(y, y_pred)
     medae = median_absolute_error(y, y_pred)
-    # rmse = np.sqrt(mse)
+    rmse = np.sqrt(mse)
     mae = mean_absolute_error(y, y_pred)
     r_squared = r2_score(y, y_pred)
+    adj_r_squared = 1 - ((1 - r_squared) * (n_sampl - 1)/(n_sampl - n_obsv - 1))
 
     print(f'{title}')
-    print(f'Median Absolute Error: {np.round(medae, 2)}')
-    # print(f'Root Mean Squared Error: {np.round(rmse, 2)}')
+    # print(f'Median Absolute Error: {np.round(medae, 2)}')
+    print(f'Root Mean Squared Error: {np.round(rmse, 2)}')
     print(f'Mean Absolute Error: {np.round(mae, 2)}')
     print(f'R-squared Error: {np.round(r_squared, 2)}')
+    print(f'Adjusted R-squared Error: {np.round(adj_r_squared, 2)}')
 
 ## Plotting Learning curves
 def plot_learing_curve(model, X, y, cv, model_title, area):
@@ -314,7 +316,7 @@ def plot_learing_curve(model, X, y, cv, model_title, area):
               fontsize = 18, 
               y = 1.03)
     plt.legend()
-    plt.ylim(0,40)
+    # plt.ylim(0,40)
 
 ## Train vs Val loss
 def metrics_graph(model, num_epoch):
