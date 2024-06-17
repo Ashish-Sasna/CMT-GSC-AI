@@ -101,8 +101,8 @@ def plot_contour(df, element, name, title, area):
  	    plt.figure(figsize=(15, 5))
 
     # Filled contour
-    cp = plt.contourf(grid_x, grid_y, grid_z, levels=15, cmap=cmap, alpha=0.7)
-    plt.colorbar(cp, label=f'{name} concentration')
+    # cp = plt.contourf(grid_x, grid_y, grid_z, levels=15, cmap=cmap, alpha=0.7)
+    # plt.colorbar(cp, label=f'{name} concentration')
 
     # Line contours
     cs = plt.contour(grid_x, grid_y, grid_z, levels=15, colors='k', linewidths=0.5)
