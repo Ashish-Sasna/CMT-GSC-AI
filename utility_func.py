@@ -1,4 +1,4 @@
-import os
+import re
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -35,6 +35,8 @@ from tensorflow.keras.optimizers.schedules import ExponentialDecay
 import xgboost
 
 import pickle as pkl
+
+import netron
 
 ## Extracting list of chemical elements
 def elem_list(df):
@@ -101,8 +103,8 @@ def plot_contour(df, element, name, title, area):
  	    plt.figure(figsize=(15, 5))
 
     # Filled contour
-    # cp = plt.contourf(grid_x, grid_y, grid_z, levels=15, cmap=cmap, alpha=0.7)
-    # plt.colorbar(cp, label=f'{name} concentration')
+    cp = plt.contourf(grid_x, grid_y, grid_z, levels=15, cmap=cmap, alpha=0.7)
+    plt.colorbar(cp, label=f'{name} concentration')
 
     # Line contours
     cs = plt.contour(grid_x, grid_y, grid_z, levels=15, colors='k', linewidths=0.5)
@@ -334,6 +336,26 @@ def metrics_graph(model, num_epoch):
     plt.legend(['train_loss', 'val_loss'])
     plt.xlabel('No. of epochs')
     plt.ylabel('Loss')
+
+## Bins classification
+def predict(model, X, y, n_bins):
+
+    a = model.predict(X)
+
+    y_pred = model.predict(X).flatten()
+
+    percentiles = np.linspace(0, 100, n_bins+1)
+    bin_edges = np.percentile(y, percentiles)
+
+    bin_labels = [f"{int(percentiles[i])}-{int(percentiles[i+1])}%" for i in range(len(percentiles) - 1)]
+
+    bin_indices = np.digitize(y_pred, bin_edges, right=True)
+
+    bin_indices = np.clip(bin_indices - 1, 0, len(bin_labels) - 1)
+
+    pred_cat = [bin_labels[i] for i in bin_indices]
+
+    return pred_cat, bin_edges, y_pred    
 
 # ## Multiple loss functions
 # def r2_score(y_true, y_pred):
