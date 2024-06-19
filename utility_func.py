@@ -1,4 +1,5 @@
 import re
+import os
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -337,10 +338,8 @@ def metrics_graph(model, num_epoch):
     plt.xlabel('No. of epochs')
     plt.ylabel('Loss')
 
-## Bins classification
+## Bins classification for DL
 def predict(model, X, y, n_bins):
-
-    a = model.predict(X)
 
     y_pred = model.predict(X).flatten()
 
@@ -356,6 +355,22 @@ def predict(model, X, y, n_bins):
     pred_cat = [bin_labels[i] for i in bin_indices]
 
     return pred_cat, bin_edges, y_pred    
+
+## Bins calssification for traditional models
+def predict_ml(y_pred, y, n_bins):
+
+    percentiles = np.linspace(0, 100, n_bins+1)
+    bin_edges = np.percentile(y, percentiles)
+
+    bin_labels = [f"{int(percentiles[i])}-{int(percentiles[i+1])}%" for i in range(len(percentiles) - 1)]
+
+    bin_indices = np.digitize(y_pred, bin_edges, right=True)
+
+    bin_indices = np.clip(bin_indices - 1, 0, len(bin_labels) - 1)
+
+    pred_cat = [bin_labels[i] for i in bin_indices]
+
+    return pred_cat, bin_edges, y_pred 
 
 # ## Multiple loss functions
 # def r2_score(y_true, y_pred):
