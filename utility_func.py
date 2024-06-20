@@ -39,6 +39,8 @@ import pickle as pkl
 
 import netron
 
+from openpyxl import load_workbook
+
 ## Extracting list of chemical elements
 def elem_list(df):
     str_elem = []
