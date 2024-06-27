@@ -7,6 +7,7 @@ import numpy as np
 
 import plotly.express as px
 import plotly.graph_objects as go
+import plotly.subplots as sp
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from mpl_toolkits.mplot3d import Axes3D
@@ -52,7 +53,10 @@ def elem_list(df):
                        'sampleno', 
                        'longitude', 
                        'latitude', 
-                       'toposheet']:
+                       'toposheet', 
+                       'soi_name', 
+                       'ssampleno', 
+                       'objectid_1']:
             str_elem.append(col)
 
     return str_elem
@@ -63,73 +67,160 @@ def plot_ppm_variation(df, element, area):
     
     for lat in lat_list:
         subset = df[df['latitude'] == lat].sort_values(by='longitude')
+        
         if area == 'Ramagiri':
-            plt.figure(figsize=(10, 2))
+            width = 1000
+            height = 400
         elif area == 'Kodangal':
-            plt.figure(figsize=(12, 2))
-        plt.plot(subset['longitude'], subset[element], marker='o', linestyle='-', color='b')
-        plt.title(f'Concentration at Latitude {lat}')
-        plt.xlabel('Longitude')
-        plt.ylabel(f'Concentration(ppm)')
-        plt.ylim(0, max(df[element]))
-        plt.grid(True)
-        plt.show()
+            width = 1000
+            height = 400
+        elif area == 'Amangal':
+            width = 1000
+            height = 300
 
-## Contour maps
-def plot_contour(df, element, name, title, area):
-    # Check if the element exists in the dataframe
+        hover_text = [
+            f"Lat: {row['latitude']}<br>Long: {row['longitude']}<br>{element}:{row[element]}"
+            for index, row in subset.iterrows()
+        ]
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=subset['longitude'], 
+            y=subset[element], 
+            mode='lines+markers', 
+            name=f'Lat {lat}', 
+            text=hover_text, 
+            hoverinfo='text'
+        ))
+
+        fig.update_layout(
+            title=f'Concentration at Latitude {lat}',
+            xaxis_title='Longitude',
+            yaxis_title=f'Concentration(ppm)',
+            width=width,
+            height=height,
+            yaxis=dict(range=[0, df[element].max()]),
+            template='plotly_white'
+        )
+
+        fig.show()
+
+def plot_contour(df, element, name, df1, title, area, df2):
     if element not in df.columns:
         raise KeyError(f"The element '{element}' does not exist in the dataframe.")
 
+    if area == 'Ramagiri':
+        height=700
+        width=1000
+    elif area == 'Kodangal':
+        height=500
+        width=1100
+    elif area == 'Amangal':
+        height=700
+        width=900
+    
     min_lat_limit = min(df['latitude']) - 0.005
     max_lat_limit = max(df['latitude']) + 0.005
     min_long_limit = min(df['longitude']) - 0.005 
     max_long_limit = max(df['longitude']) + 0.005
 
     grid_x, grid_y = np.mgrid[
-        min_long_limit:max_long_limit:200j,  # 200j specifies 200 points in grid
+        min_long_limit:max_long_limit:200j,
         min_lat_limit:max_lat_limit:200j
     ]
 
-    # Grid interpolation
     grid_z = griddata(
         (df['longitude'], df['latitude']),
         df[element],
         (grid_x, grid_y),
-        method='cubic'  # 'cubic' for smoother contour lines
+        method='cubic'
+    )
+    
+    # Create contour plot
+    contour = go.Contour(
+        x=np.linspace(min_long_limit, max_long_limit, 200),
+        y=np.linspace(min_lat_limit, max_lat_limit, 200),
+        z=grid_z.T,
+        colorscale=[
+            [0.0, 'green'],
+            [0.5, 'yellow'],
+            [1.0, 'red']
+        ],
+        colorbar=dict(title=f"{name} Concentration"),
+        contours=dict(
+            coloring='heatmap',
+            showlabels=True,
+            labelfont=dict(size=12, color='black')
+        ), 
+        hovertemplate='Latitude: %{y}<br>Longitude: %{x}<br>Concentration: %{z}<extra></extra>'
     )
 
-    cmap = LinearSegmentedColormap.from_list("green_to_red", ["green", "yellow", "red"])
-    
-    if area == 'Ramagiri':
-        plt.figure(figsize=(10, 6))
-    elif area == 'Kodangal':
- 	    plt.figure(figsize=(15, 5))
+    colors = ['#b45f06', '#d30202', '#203254']
+    markers = ['cross', 'circle', 'triangle-up']
+    scatter2 = []
+    # Create scatter plot for test data points
+    if df1 is not None:
+        scatter1 = go.Scatter(
+            x=df1['longitude'],
+            y=df1['latitude'],
+            mode='markers+text',
+            marker=dict(color='black', size=10, line=dict(width=2, color='white')),
+            text=[f"{row[element]:.2f}" for i, row in df1.iterrows()],
+            textposition='middle right',
+            textfont=dict(family='Arial', size=12, color='black'),
+            name='C-Horizon Data Points'
+        )
+    else:
+        scatter1 = None
 
-    # Filled contour
-    cp = plt.contourf(grid_x, grid_y, grid_z, levels=15, cmap=cmap, alpha=0.7)
-    plt.colorbar(cp, label=f'{name} concentration')
-
-    # Line contours
-    cs = plt.contour(grid_x, grid_y, grid_z, levels=15, colors='k', linewidths=0.5)
-    plt.clabel(cs, inline=True, fontsize=8, fmt='%1.0f')
-
-    # plt.scatter(df['longitude'], df['latitude'], color='black', s=10)  # Sample points
+    if df2 is not None:
+        for cluster in sorted(df2['cluster'].unique()):
+            cluster_data = df2[df2['cluster'] == cluster]
+            scatter = go.Scatter(
+                x=cluster_data['longitude'],
+                y=cluster_data['latitude'],
+                mode='markers',
+                marker=dict(symbol=markers[cluster - 1], color=colors[cluster - 1], size=9, line=dict(width=1, color='white')),
+                text=[f"{row[element]:.2f}" for i, row in cluster_data.iterrows()],
+                textposition='middle right',
+                textfont=dict(family='Arial', size=12, color='black'),
+                name=f'Cluster{cluster}',
+                hovertemplate='Latitude: %{y}<br>Longitude: %{x}<br>Concentration: %{text}<extra></extra>'
+            )
+            scatter2.append(scatter)
+    # else:
+    #     scatter2 = None
     
-    # Annotate ppm values at each sample point
-    # for x, y, ppm in zip(df['longitude'], df['latitude'], df[element]):
-    #     plt.text(x, y, f'{ppm:.1f}', color='black', fontsize=8, ha='right')
-
-    plt.title(title)
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
-    plt.grid(True, color='gray', linestyle='--', linewidth=0.5)
+    # Create the layout
+    layout = go.Layout(
+        title=title,
+        xaxis=dict(title='Longitude'),
+        yaxis=dict(title='Latitude'),
+        showlegend=True,
+        autosize=False,
+        width=width,
+        height=height, 
+        legend=dict(
+            orientation="h",
+            yanchor="top",
+            y=1.06,
+            xanchor="left",
+            x=0
+        )
+    )
     
-    # Positioning the legend outside the plot area with spacing
-    plt.legend(['Sample Points'], loc='upper left', bbox_to_anchor=(1, 1))
-    
-    plt.tight_layout(rect=[0, 0, 0.85, 1])
-    plt.show()
+    # Combine contour and scatter (if available)
+    data = [contour]
+    if scatter1 is not None:
+        data.append(scatter1)
+    if scatter2 is not None:
+        data.extend(scatter2)
+    # data.extend(scatter1)
+    # data.extend(scatter2)
+        
+    fig = go.Figure(data=data, layout=layout)
+        
+    return fig
 
 ## Nearest neighbor capping
 def nn_cap(elem, elem_df, df, val):
@@ -154,7 +245,8 @@ def nn_cap(elem, elem_df, df, val):
 def handle_outl(df, elem_list, ex_elem):
 
     cols = elem_list
-    cols = [x for x in cols if x not in ex_elem]
+    if ex_elem is not None:
+        cols = [x for x in cols if x not in ex_elem]
     
     for elem in cols:
         
