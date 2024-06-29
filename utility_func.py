@@ -476,3 +476,37 @@ def predict_ml(y_pred, y, n_bins):
 # def median_absolute_error(y_true, y_pred):
 #     error = tf.abs(y_true - y_pred)
 #     return tf.numpy_function(np.median, [error], tf.float32)
+
+## Calculate proximity of elements from target
+def pca_distance(df, element):
+
+    x = df[df['elements'] == element]['PC1']
+    y = df[df['elements'] == element]['PC2']
+    z = df[df['elements'] == element]['PC3']
+
+    def dist_2D(row, x, y):
+        distance = np.sqrt(np.power(row['PC1'] - x, 2) + np.power(row['PC2'] - y, 2))
+        return distance
+        
+    def dist_3D(row, x, y, z):
+        distance = np.sqrt(np.power(row['PC1'] - x, 2) + np.power(row['PC2'] - y, 2) + np.power(row['PC3'] - z, 2))
+        return distance
+
+    ## Distance from target element
+    df[f'2D Distance from {element}'] = df[['PC1', 'PC2']].apply(lambda row: dist_2D(row, x, y), axis=1)
+    df[f'3D Distance from {element}'] = df[['PC1', 'PC2', 'PC3']].apply(lambda row: dist_3D(row, x, y, z), axis=1)
+
+    ## Percentage of distance from target element
+    max_dist_2D = max(df[f'2D Distance from {element}'])
+    max_dist_3D = max(df[f'3D Distance from {element}'])
+    df[f'2D Distance percentage from {element}(in %)'] = df[f'2D Distance from {element}'].apply(lambda x: (x*100)/max_dist_2D)
+    df[f'3D Distance percentage from {element}(in %)'] = df[f'3D Distance from {element}'].apply(lambda x: (x*100)/max_dist_3D)
+
+    return df
+
+## Get predictors based on percentage for target
+def select_predictors(df, percentage, element, dimension):
+
+    elem_list = df[df[f'{dimension} Distance percentage from {element}(in %)'] <= percentage]['elements'].tolist()
+
+    return elem_list
